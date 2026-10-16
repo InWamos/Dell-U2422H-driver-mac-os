@@ -74,9 +74,9 @@ struct BrightnessView: View {
             Text("Dell U2422H").font(.headline)
             if model.reachable {
                 HStack {
-                    Image(systemName: "sun.min")
-                    Slider(value: brightness, in: 0...model.maximum, step: 1)
-                    Image(systemName: "sun.max")
+                    Image(systemName: "sun.min").accessibilityHidden(true)
+                    Slider(value: brightness, in: 0...model.maximum, step: 1).accessibilityLabel("Brightness")
+                    Image(systemName: "sun.max").accessibilityHidden(true)
                     Text("\(Int(model.brightness))%").monospacedDigit().frame(width: 40, alignment: .trailing)
                 }
             } else {
@@ -104,7 +104,7 @@ struct U2422HControlApp: App {
         MenuBarExtra {
             BrightnessView(model: model)
         } label: {
-            Image(nsImage: .dellWordmark)
+            Image(nsImage: .dellWordmark).accessibilityLabel("Dell U2422H")
         }
         .menuBarExtraStyle(.window)
     }
