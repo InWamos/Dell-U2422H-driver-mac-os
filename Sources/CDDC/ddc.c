@@ -13,6 +13,7 @@ extern IOReturn IOAVServiceWriteI2C(IOAVServiceRef, uint32_t chip, uint32_t data
 
 enum { DDC_CHIP = 0x37, DDC_HOST = 0x51, DDC_DISPLAY = 0x6E, DDC_RETRIES = 4 };
 
+// ponytail: takes the first external display; match on EDID if a second external monitor is ever attached.
 DDCDisplayRef ddc_open_external_display(void) {
     io_iterator_t iterator;
     if (IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("DCPAVServiceProxy"), &iterator) != KERN_SUCCESS)

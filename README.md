@@ -17,6 +17,10 @@ Requires an Apple Silicon Mac on macOS 14 or later.
 swift build -c release                    # menu-bar app + `ddc` CLI in .build/release/
 packaging/bundle-app.sh 0.0.0-dev         # dist/U2422HControl.app and a zip
 .build/release/ddc get 10                 # read brightness (VCP 0x10)
+swift format --in-place --recursive Sources Package.swift   # format
+swiftlint lint --strict                   # lint (CI also writes a JUnit report, swiftlint.xml)
 ```
+
+Without full Xcode, SwiftLint needs `TOOLCHAIN_DIR=/Library/Developer/CommandLineTools` to find SourceKit.
 
 Every push to `main` that touches the app builds it and publishes a GitHub release `v0.1.<run number>`.

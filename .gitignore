@@ -63,3 +63,4 @@ fastlane/test_output
 
 # Packaged app (packaging/bundle-app.sh)
 dist/
+swiftlint.xml

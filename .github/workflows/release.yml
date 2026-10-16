@@ -9,7 +9,7 @@ on:
       - packaging/**
       - .github/workflows/release.yml
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - Package.swift
       - Sources/**
