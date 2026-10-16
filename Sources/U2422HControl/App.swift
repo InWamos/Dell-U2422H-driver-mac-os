@@ -72,7 +72,7 @@ struct BrightnessView: View {
             if model.reachable {
                 HStack {
                     Image(systemName: "sun.min")
-                    Slider(value: Binding(get: { model.brightness }, set: model.setBrightness), in: 0...model.maximum, step: 1)
+                    Slider(value: Binding(get: { model.brightness }, set: { model.setBrightness($0) }), in: 0...model.maximum, step: 1)
                     Image(systemName: "sun.max")
                     Text("\(Int(model.brightness))%").monospacedDigit().frame(width: 40, alignment: .trailing)
                 }

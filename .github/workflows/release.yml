@@ -8,6 +8,13 @@ on:
       - Sources/**
       - packaging/**
       - .github/workflows/release.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - Package.swift
+      - Sources/**
+      - packaging/**
+      - .github/workflows/release.yml
 
 permissions:
   contents: write
@@ -20,7 +27,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: packaging/bundle-app.sh "$VERSION"
-      - run: >
+      - if: ${{ github.event_name == 'push' && !env.ACT }}  # PRs only build; act (local runs) must never publish
+        run: >
           gh release create "v$VERSION" "dist/U2422HControl-$VERSION.zip"
           --target "$GITHUB_SHA" --notes-file packaging/release-notes.md --generate-notes
         env:
