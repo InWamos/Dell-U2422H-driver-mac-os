@@ -4,13 +4,15 @@ import SwiftUI
 
 private let vcpBrightness: UInt8 = 0x10
 
+// ponytail: DDC calls block a cooperative-pool thread for up to ~1 s; move to a dedicated thread if UI ever stalls.
 /// Serialises DDC traffic; reopens the display once if the handle went stale (sleep, replug).
 actor ExternalDisplay {
     private var handle: DDCDisplayRef?
 
     func read(_ code: UInt8) -> (current: Int, maximum: Int)? {
         withHandle { display in
-            var current: UInt16 = 0, maximum: UInt16 = 0
+            var current: UInt16 = 0
+            var maximum: UInt16 = 0
             return ddc_get_vcp(display, code, &current, &maximum) ? (Int(current), Int(maximum)) : nil
         }
     }
@@ -41,8 +43,9 @@ final class BrightnessModel {
     private var isWriting = false
 
     func refresh() async {
-        guard let reading = await display.read(vcpBrightness) else { reachable = false; return }
-        reachable = true
+        let reading = await display.read(vcpBrightness)
+        reachable = reading != nil
+        guard let reading else { return }
         maximum = Double(reading.maximum)
         brightness = Double(reading.current)
     }
@@ -72,7 +75,7 @@ struct BrightnessView: View {
             if model.reachable {
                 HStack {
                     Image(systemName: "sun.min")
-                    Slider(value: Binding(get: { model.brightness }, set: { model.setBrightness($0) }), in: 0...model.maximum, step: 1)
+                    Slider(value: brightness, in: 0...model.maximum, step: 1)
                     Image(systemName: "sun.max")
                     Text("\(Int(model.brightness))%").monospacedDigit().frame(width: 40, alignment: .trailing)
                 }
@@ -85,6 +88,11 @@ struct BrightnessView: View {
         .padding()
         .frame(width: 300)
         .task { await model.refresh() }
+    }
+
+    /// A closure setter, not `model.setBrightness`: Swift 6.3 crashes compiling the method-reference thunk.
+    private var brightness: Binding<Double> {
+        Binding(get: { model.brightness }, set: { model.setBrightness($0) })
     }
 }
 

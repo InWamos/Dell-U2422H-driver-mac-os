@@ -1,0 +1,5 @@
+included:
+  - Sources
+  - Package.swift
+disabled_rules:
+  - trailing_comma # swift-format owns trailing commas and adds them to multi-line collections

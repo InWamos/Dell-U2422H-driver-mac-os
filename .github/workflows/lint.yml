@@ -1,0 +1,21 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - run: swiftlint lint --strict --reporter junit --output swiftlint.xml
+      - if: ${{ !cancelled() }}
+        run: swift format lint --strict --recursive Sources Package.swift
+      - if: ${{ !cancelled() && !env.ACT }}
+        uses: actions/upload-artifact@v7
+        with:
+          path: swiftlint.xml
+          archive: false
