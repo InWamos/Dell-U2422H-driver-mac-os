@@ -11,6 +11,7 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
+      - run: brew install swiftlint # not preinstalled on macos-26, despite the image readme
       - run: swiftlint lint --strict --reporter junit --output swiftlint.xml
       - if: ${{ !cancelled() }}
         run: swift format lint --strict --recursive Sources Package.swift
