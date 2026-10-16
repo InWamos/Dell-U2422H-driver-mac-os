@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, dev]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   lint:
     runs-on: macos-26
@@ -20,3 +24,11 @@ jobs:
         with:
           path: swiftlint.xml
           archive: false
+      - if: ${{ !cancelled() && github.event_name == 'pull_request' && !env.ACT }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          report=$(swiftlint lint --quiet --reporter markdown | sed "s|$PWD/||")
+          [ "$(echo "$report" | wc -l)" -gt 2 ] || report="✅ No SwiftLint violations"
+          printf '### SwiftLint\n\n%s\n' "$report" > lint.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file lint.md --edit-last --create-if-none
