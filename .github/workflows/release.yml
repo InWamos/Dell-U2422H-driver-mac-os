@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Package.swift
+      - Sources/**
+      - packaging/**
+      - .github/workflows/release.yml
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    env:
+      VERSION: 0.1.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: packaging/bundle-app.sh "$VERSION"
+      - run: >
+          gh release create "v$VERSION" "dist/U2422HControl-$VERSION.zip"
+          --target "$GITHUB_SHA" --notes-file packaging/release-notes.md --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

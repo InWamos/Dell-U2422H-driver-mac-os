@@ -88,15 +88,8 @@ struct BrightnessView: View {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
-    }
-}
-
 @main
 struct U2422HControlApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     private let model = BrightnessModel()
 
     var body: some Scene {
