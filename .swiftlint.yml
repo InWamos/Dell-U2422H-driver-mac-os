@@ -1,0 +1,10 @@
+included:
+  - Sources
+  - Package.swift
+disabled_rules:
+  - trailing_comma # swift-format owns trailing commas and adds them to multi-line collections
+opt_in_rules:
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - fatal_error_message
+  - accessibility_label_for_image
