@@ -3,6 +3,8 @@
 A lightweight macOS menu-bar replacement for Dell Display and Peripheral Manager, for the Dell U2422H.
 It talks to the monitor over DDC/CI and controls brightness and contrast.
 
+<img src="docs/popover.png" width="294" alt="Menu-bar popover with brightness and contrast sliders and a Launch at login checkbox">
+
 ## Install
 
 Download the latest `U2422HControl-<version>.zip` from [Releases](../../releases/latest).
