@@ -1,5 +1,6 @@
 import AppKit
 import CDDC
+import ServiceManagement
 import SwiftUI
 
 private let vcpBrightness: UInt8 = 0x10
@@ -74,6 +75,23 @@ final class VCPControl {
     }
 }
 
+/// "Launch at login", backed by the system list in System Settings > General > Login Items.
+@MainActor @Observable
+final class LoginItem {
+    private(set) var isEnabled = false
+
+    func refresh() {
+        isEnabled = SMAppService.mainApp.status == .enabled
+    }
+
+    func set(_ enabled: Bool) {
+        let service = SMAppService.mainApp
+        if enabled { try? service.register() } else { try? service.unregister() }
+        if service.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
+        refresh()
+    }
+}
+
 struct VCPSlider: View {
     let control: VCPControl
     let label: String
@@ -83,9 +101,9 @@ struct VCPSlider: View {
     var body: some View {
         HStack {
             Image(systemName: lowIcon).accessibilityHidden(true)
-            Slider(value: binding, in: 0...control.maximum, step: 1).accessibilityLabel(label)
+            Slider(value: binding, in: 0...control.maximum).accessibilityLabel(label)
             Image(systemName: highIcon).accessibilityHidden(true)
-            Text("\(Int(control.value))%").monospacedDigit().frame(width: 40, alignment: .trailing)
+            Text("\(Int(control.value.rounded()))%").monospacedDigit().frame(width: 40, alignment: .trailing)
         }
     }
 
@@ -98,6 +116,7 @@ struct VCPSlider: View {
 struct ControlsView: View {
     let brightness: VCPControl
     let contrast: VCPControl
+    let loginItem: LoginItem
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -117,14 +136,20 @@ struct ControlsView: View {
                 Text("Monitor not reachable over DDC/CI").foregroundStyle(.secondary)
             }
             Divider()
+            Toggle("Launch at login", isOn: launchAtLogin)
             Button("Quit") { NSApp.terminate(nil) }
         }
         .padding()
         .frame(width: 300)
         .task {
+            loginItem.refresh()
             await brightness.refresh()
             await contrast.refresh()
         }
+    }
+
+    private var launchAtLogin: Binding<Bool> {
+        Binding(get: { loginItem.isEnabled }, set: { loginItem.set($0) })
     }
 }
 
@@ -132,6 +157,7 @@ struct ControlsView: View {
 struct U2422HControlApp: App {
     private let brightness: VCPControl
     private let contrast: VCPControl
+    private let loginItem = LoginItem()
 
     init() {
         let display = ExternalDisplay()  // shared: one actor serialises all DDC traffic
@@ -141,7 +167,7 @@ struct U2422HControlApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            ControlsView(brightness: brightness, contrast: contrast)
+            ControlsView(brightness: brightness, contrast: contrast, loginItem: loginItem)
         } label: {
             Image(nsImage: .dellWordmark).accessibilityLabel("Dell U2422H")
         }
