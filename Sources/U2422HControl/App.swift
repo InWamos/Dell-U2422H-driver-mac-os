@@ -3,6 +3,7 @@ import CDDC
 import SwiftUI
 
 private let vcpBrightness: UInt8 = 0x10
+private let vcpContrast: UInt8 = 0x12
 
 // ponytail: DDC calls block a cooperative-pool thread for up to ~1 s; move to a dedicated thread if UI ever stalls.
 /// Serialises DDC traffic; reopens the display once if the handle went stale (sleep, replug).
@@ -33,53 +34,86 @@ actor ExternalDisplay {
     }
 }
 
+/// One VCP feature of the monitor (brightness, contrast, ...), mirrored for a slider.
 @MainActor @Observable
-final class BrightnessModel {
-    var brightness = 0.0
+final class VCPControl {
+    var value = 0.0
     var maximum = 100.0
     var reachable = true
-    private let display = ExternalDisplay()
+    private let code: UInt8
+    private let display: ExternalDisplay
     private var pendingValue: Int?
     private var isWriting = false
 
+    init(code: UInt8, display: ExternalDisplay) {
+        self.code = code
+        self.display = display
+    }
+
     func refresh() async {
-        let reading = await display.read(vcpBrightness)
+        let reading = await display.read(code)
         reachable = reading != nil
         guard let reading else { return }
         maximum = Double(reading.maximum)
-        brightness = Double(reading.current)
+        value = Double(reading.current)
     }
 
     /// Slider drags fire far faster than DDC can take writes, so only the latest value is sent.
-    func setBrightness(_ value: Double) {
-        brightness = value
-        pendingValue = Int(value.rounded())
+    func set(_ newValue: Double) {
+        value = newValue
+        pendingValue = Int(newValue.rounded())
         guard !isWriting else { return }
         isWriting = true
         Task {
-            while let value = pendingValue {
+            while let next = pendingValue {
                 pendingValue = nil
-                await display.write(vcpBrightness, value)
+                await display.write(code, next)
             }
             isWriting = false
         }
     }
 }
 
-struct BrightnessView: View {
-    let model: BrightnessModel
+struct VCPSlider: View {
+    let control: VCPControl
+    let label: String
+    let lowIcon: String
+    let highIcon: String
+
+    var body: some View {
+        HStack {
+            Image(systemName: lowIcon).accessibilityHidden(true)
+            Slider(value: binding, in: 0...control.maximum, step: 1).accessibilityLabel(label)
+            Image(systemName: highIcon).accessibilityHidden(true)
+            Text("\(Int(control.value))%").monospacedDigit().frame(width: 40, alignment: .trailing)
+        }
+    }
+
+    /// A closure setter, not `control.set`: Swift 6.3 crashes compiling the method-reference thunk.
+    private var binding: Binding<Double> {
+        Binding(get: { control.value }, set: { control.set($0) })
+    }
+}
+
+struct ControlsView: View {
+    let brightness: VCPControl
+    let contrast: VCPControl
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Dell U2422H").font(.headline)
-            if model.reachable {
-                HStack {
-                    Image(systemName: "sun.min").accessibilityHidden(true)
-                    Slider(value: brightness, in: 0...model.maximum, step: 1).accessibilityLabel("Brightness")
-                    Image(systemName: "sun.max").accessibilityHidden(true)
-                    Text("\(Int(model.brightness))%").monospacedDigit().frame(width: 40, alignment: .trailing)
-                }
-            } else {
+            if brightness.reachable {
+                VCPSlider(control: brightness, label: "Brightness", lowIcon: "sun.min", highIcon: "sun.max")
+            }
+            if contrast.reachable {
+                VCPSlider(
+                    control: contrast,
+                    label: "Contrast",
+                    lowIcon: "circle.lefthalf.filled",
+                    highIcon: "circle.righthalf.filled"
+                )
+            }
+            if !brightness.reachable && !contrast.reachable {
                 Text("Monitor not reachable over DDC/CI").foregroundStyle(.secondary)
             }
             Divider()
@@ -87,22 +121,27 @@ struct BrightnessView: View {
         }
         .padding()
         .frame(width: 300)
-        .task { await model.refresh() }
-    }
-
-    /// A closure setter, not `model.setBrightness`: Swift 6.3 crashes compiling the method-reference thunk.
-    private var brightness: Binding<Double> {
-        Binding(get: { model.brightness }, set: { model.setBrightness($0) })
+        .task {
+            await brightness.refresh()
+            await contrast.refresh()
+        }
     }
 }
 
 @main
 struct U2422HControlApp: App {
-    private let model = BrightnessModel()
+    private let brightness: VCPControl
+    private let contrast: VCPControl
+
+    init() {
+        let display = ExternalDisplay()  // shared: one actor serialises all DDC traffic
+        brightness = VCPControl(code: vcpBrightness, display: display)
+        contrast = VCPControl(code: vcpContrast, display: display)
+    }
 
     var body: some Scene {
         MenuBarExtra {
-            BrightnessView(model: model)
+            ControlsView(brightness: brightness, contrast: contrast)
         } label: {
             Image(nsImage: .dellWordmark).accessibilityLabel("Dell U2422H")
         }

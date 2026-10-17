@@ -1,7 +1,7 @@
 # Dell-U2422H-driver-mac-os
 
 A lightweight macOS menu-bar replacement for Dell Display and Peripheral Manager, for the Dell U2422H.
-It talks to the monitor over DDC/CI; for now it controls brightness.
+It talks to the monitor over DDC/CI and controls brightness and contrast.
 
 ## Install
 
