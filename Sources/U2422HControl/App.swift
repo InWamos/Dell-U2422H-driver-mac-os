@@ -101,9 +101,9 @@ struct VCPSlider: View {
     var body: some View {
         HStack {
             Image(systemName: lowIcon).accessibilityHidden(true)
-            Slider(value: binding, in: 0...control.maximum, step: 1).accessibilityLabel(label)
+            Slider(value: binding, in: 0...control.maximum).accessibilityLabel(label)
             Image(systemName: highIcon).accessibilityHidden(true)
-            Text("\(Int(control.value))%").monospacedDigit().frame(width: 40, alignment: .trailing)
+            Text("\(Int(control.value.rounded()))%").monospacedDigit().frame(width: 40, alignment: .trailing)
         }
     }
 
